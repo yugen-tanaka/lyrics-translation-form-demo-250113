@@ -6,6 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/lyrics-translation-form-demo-250113/',
   plugins: [
     vue(),
     vueDevTools(),
