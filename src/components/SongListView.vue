@@ -12,6 +12,23 @@ const languageFee = 3500;
 const isErrMsg = ref(false);
 const errMsg = ref('');
 
+const calculateSongPrice = () => {
+  let totalPrice = languageFee * selectedLanguages.value.length;
+  if (needSRT) {
+    selectedSRTLanguages.value.forEach((language) => {
+        const languageResult = selectedLanguages.find(lang => lang.id === language.id);
+        if (!languageResult) {
+            const index = selectedSRTLanguages.value.findIndex((lang) => {lang.id === language.id});
+            
+        }
+    });
+    totalPrice += srtFee * selectedSRTLanguages.length;
+    
+  }
+  // より複雑な計算式を追加する場合はここに記述
+  return totalPrice;
+};
+
 let isEditing = ref(false);
 let artistName = ref('');
 let title = ref('');
@@ -20,6 +37,7 @@ let lyrics = ref('');
 let audioFileLink = ref('');
 let selectedLanguages = ref([]);
 let needSRT = ref(false);
+let selectedSRTLanguages = ref([]);
 const audioFile = ref(null);
 let audioSrc = ref("");
 
@@ -165,66 +183,70 @@ function deleteSong(id) {
 }
 function handleLyricsFile(event) {
     const file = event.target.files[0]; // 選択されたファイルを取得
-if (!file) {
-    return;
-};
-if (file && file.type === "text/plain") {
-  const reader = new FileReader(); // FileReader API を使用
-  reader.onload = (e) => {
-    const result = e.target.result;
-    if (result.length>1000) {
-        alert("文字数が1000文字を超えています。");
+    if (!file) {
         return;
+    };
+    if (file && file.type === "text/plain") {
+        const reader = new FileReader(); // FileReader API を使用
+        reader.onload = (e) => {
+            const result = e.target.result;
+            if (result.length > 1000) {
+                alert("文字数が1000文字を超えています。");
+                return;
+            }
+            lyrics.value = e.target.result; // ファイル内容を格納
+            console.log(lyrics.value);
+        };
+        reader.readAsText(file); // テキストとしてファイルを読み取る
+    } else {
+        alert("有効なテキストファイルを選択してください (.txt)");
     }
-    lyrics.value = e.target.result; // ファイル内容を格納
-    console.log(lyrics.value);
-  };
-  reader.readAsText(file); // テキストとしてファイルを読み取る
-} else {
-  alert("有効なテキストファイルを選択してください (.txt)");
 }
-}
+
+const SRTselectAll = () => {
+  selectedSRTLanguages.value = JSON.parse(JSON.stringify(selectedLanguages.value));
+};
 
 function handleAudioUpload(event) {
-  const selectedFile = event.target.files[0];
-  if (!selectedFile) {
-    return;
-};
-  // ファイルが選択されていない場合
-  if (!selectedFile) {
-    errMsg.value = "ファイルを選択してください。";
-    alert(errMsg.value);
-    return;
-  }
+    const selectedFile = event.target.files[0];
+    if (!selectedFile) {
+        return;
+    };
+    // ファイルが選択されていない場合
+    if (!selectedFile) {
+        errMsg.value = "ファイルを選択してください。";
+        alert(errMsg.value);
+        return;
+    }
 
-  // ファイル形式のチェック
-  if (selectedFile.type !== "audio/mpeg") {
-    errMsg.value = "MP3形式の音源ファイルのみアップロード可能です。";
-    alert(errMsg.value);
-    return;
-  }
+    // ファイル形式のチェック
+    if (selectedFile.type !== "audio/mpeg") {
+        errMsg.value = "MP3形式の音源ファイルのみアップロード可能です。";
+        alert(errMsg.value);
+        return;
+    }
 
-  // ファイルサイズのチェック（例: 10MB制限）
-  const maxSizeMB = 10;
-  if (selectedFile.size > maxSizeMB * 1024 * 1024) {
-    errMsg.value = `ファイルサイズは最大${maxSizeMB}MBまでです。`;
-    alert(errMsg.value);
-    return;
-  }
+    // ファイルサイズのチェック（例: 10MB制限）
+    const maxSizeMB = 10;
+    if (selectedFile.size > maxSizeMB * 1024 * 1024) {
+        errMsg.value = `ファイルサイズは最大${maxSizeMB}MBまでです。`;
+        alert(errMsg.value);
+        return;
+    }
 
-  // 問題がなければデータをセット
-  audioFile.value = selectedFile;
-  errMsg.value = "";
+    // 問題がなければデータをセット
+    audioFile.value = selectedFile;
+    errMsg.value = "";
 
-  // FileReader を使って音声ファイルのURLを生成
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    audioSrc.value = e.target.result.replace("data:audio/mpeg", "data:audio/mp3"); 
-    console.log("File: loaded (audioSrc):)",audioSrc.value);
-    audioKey.value += 1;
-  };
-  reader.readAsDataURL(selectedFile);
-  
+    // FileReader を使って音声ファイルのURLを生成
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        audioSrc.value = e.target.result.replace("data:audio/mpeg", "data:audio/mp3");
+        console.log("File: loaded (audioSrc):)", audioSrc.value);
+        audioKey.value += 1;
+    };
+    reader.readAsDataURL(selectedFile);
+
 }
 </script>
 
@@ -242,91 +264,101 @@ function handleAudioUpload(event) {
                 <th>削除</th>
             </thead>
             <tbody>
-            <tr v-for="song in songs" :key="song.id">
-                <template v-if="!song.isEditing">
-                    <td>{{ song.title }}</td>
-                    <td>{{ song.languages.map((a) => a.value).join(", ") }}</td>
-                    <td>¥{{ song.price }}</td>
-                    <td><button @click="editSong(song.id)" :disabled="isEditing"
-                            class="w3-button w3-round-large w3-lime">編集</button>
-                    </td>
-                    <td><button @click="showDeleteModal(song)" :disabled="isEditing"
-                            class="w3-button w3-round-large w3-light-gray w3-text-red">削除</button>
-                    </td>
-                </template>
-                <template v-else>
-                    <td colspan="4">
+                <tr v-for="song in songs" :key="song.id">
+                    <template v-if="!song.isEditing">
+                        <td>{{ song.title }}</td>
+                        <td>{{ song.languages.map((a) => a.value).join(", ") }}</td>
+                        <td>¥{{ song.price }}</td>
+                        <td><button @click="editSong(song.id)" :disabled="isEditing"
+                                class="w3-button w3-round-large w3-lime">編集</button>
+                        </td>
+                        <td><button @click="showDeleteModal(song)" :disabled="isEditing"
+                                class="w3-button w3-round-large w3-light-gray w3-text-red">削除</button>
+                        </td>
+                    </template>
+                    <template v-else>
+                        <td colspan="4">
 
-                        <div class="w3-display-container" style="width: 100%;">
+                            <div class="w3-display-container" style="width: 100%;">
 
-                            <form class="w3-container">
-                                <section>
-                                    <label for="artistName"><b>アーティスト名</b><span class="w3-text-red">*</span></label>
-                                    <input class="w3-input w3-border w3-round" id="artistName" v-model="artistName" type="text" placeholder="アーティスト名" />
-                                    <label for="title"><b>楽曲名</b><span class="w3-text-red">*</span></label>
-                                    <input id="title" v-model="title" type="text" placeholder="楽曲名"
-                                        class="w3-input w3-border w3-round" />
-                                    <label for="titleYomi"><b>楽曲名ヨミ</b><span class="w3-text-red">*</span></label>
-                                    <input id="titleYomi" v-model="titleYomi" type="text" placeholder="ガッキョクメイ"
-                                        class="w3-input w3-border w3-round" />
+                                <form class="w3-container">
+                                    <section>
+                                        <label for="artistName"><b>アーティスト名</b><span class="w3-text-red">*</span></label>
+                                        <input class="w3-input w3-border w3-round" id="artistName" v-model="artistName"
+                                            type="text" placeholder="アーティスト名" />
+                                        <label for="title"><b>楽曲名</b><span class="w3-text-red">*</span></label>
+                                        <input id="title" v-model="title" type="text" placeholder="楽曲名"
+                                            class="w3-input w3-border w3-round" />
+                                        <label for="titleYomi"><b>楽曲名ヨミ</b><span class="w3-text-red">*</span></label>
+                                        <input id="titleYomi" v-model="titleYomi" type="text" placeholder="ガッキョクメイ"
+                                            class="w3-input w3-border w3-round" />
                                         <hr>
-                                    <label for="lyrics"><b>歌詞</b><span class="w3-text-red">*</span></label>
+                                        <label for="lyrics"><b>歌詞</b><span class="w3-text-red">*</span></label>
 
-                                    <textarea id="lyrics" v-model="lyrics" type="text" maxlength="1000" placeholder="歌詞を入力"
-                                        class="w3-input w3-border w3-round">{{ lyrics }}</textarea>
+                                        <textarea id="lyrics" v-model="lyrics" type="text" maxlength="1000"
+                                            placeholder="歌詞を入力"
+                                            class="w3-input w3-border w3-round">{{ lyrics }}</textarea>
 
-                                    <p :class='lyrics.length == 1000 ? "w3-pale-red" : ""'><span>{{ lyrics.length
-                                            }}/1000文字</span>
-                                    </p>
-                                    <p>または.txtファイルをアップロード</p><input type="file" accept=".txt" class="w3-input" @change="handleLyricsFile"/>
+                                        <p :class='lyrics.length == 1000 ? "w3-pale-red" : ""'><span>{{ lyrics.length
+                                                }}/1000文字</span>
+                                        </p>
+                                        <p>または.txtファイルをアップロード</p><input type="file" accept=".txt" class="w3-input"
+                                            @change="handleLyricsFile" />
 
 
 
-                                    <label for="audioFileLink"><b>音源</b><span class="w3-text-red">*</span></label>
-                                    <input id="audioFileLink" v-model="audioFileLink" type="url" placeholder="音源リンク https://" class="w3-input  w3-border w3-round" />
-                                    <p>またはMP3ファイルをアップロード</p>
-                                    <input type="file" accept=".mp3" class="w3-input" @change="handleAudioUpload"/>
-                                    <audio :src="audioSrc" controls v-if="audioSrc"></audio>
-                                    
-                                    <label><b>翻訳先言語(複数可)</b><span class="w3-text-red">*</span></label>
+                                        <label for="audioFileLink"><b>音源</b><span class="w3-text-red">*</span></label>
+                                        <input id="audioFileLink" v-model="audioFileLink" type="url"
+                                            placeholder="音源リンク https://" class="w3-input  w3-border w3-round" />
+                                        <p>またはMP3ファイルをアップロード</p>
+                                        <input type="file" accept=".mp3" class="w3-input" @change="handleAudioUpload" />
+                                        <audio :src="audioSrc" controls v-if="audioSrc"></audio>
 
-                                    <div>
-                                        <div v-for="language in languages">
-                                            <input class="w3-check" type="checkbox" :id="language.id" :value="language"
-                                                v-model="selectedLanguages" />
-                                            <label :for="language.id">{{ language.value }}</label><br>
+                                        <label><b>翻訳先言語(複数可)</b><span class="w3-text-red">*</span></label>
+
+                                        <div>
+                                            <div v-for="language in languages">
+                                                <input class="w3-check" type="checkbox" :id="language.id"
+                                                    :value="language" v-model="selectedLanguages" />
+                                                <label :for="language.id">{{ language.value }}</label><br>
+                                            </div>
                                         </div>
-                                    </div>
-                                </section>
+                                    </section>
 
-                                <hr />
-                                <section>
-                                    <h6 class="w3-text-gray">オプション</h6>
+                                    <hr />
+                                    <section>
+                                        <h6 class="w3-text-gray">オプション</h6>
 
-                                    <input class="w3-check" type="checkbox" v-model="needSRT">
-                                    <label><b>srtファイル作成(+¥{{ srtFee }})</b></label><br>
-                                    <!-- <input class="w3-check" type="checkbox" v-model="haveSRT">
-                                    <label><b>既にsrtファイルを持っています</b></label>
-                                    <div v-if="haveSRT">
-                                        <input type="file" class="w3-input"/>
-                                    </div> -->
-                                </section>
+                                        <input class="w3-check" type="checkbox" v-model="needSRT">
+                                        <label><b>srtファイル作成 +¥{{ srtFee*selectedLanguages.length }}</b> (1言語あたり¥1000)</label><br>
+                                        <!-- <div v-if="needSRT">
+                                            <button @click.prevent="SRTselectAll" class="w3-btn w3-round-large w3-light-gray" >全て選択</button>
 
-                                <hr />
-                                <label><b>金額</b></label>
-                                <p>¥{{ languageFee * selectedLanguages.length + (needSRT ? srtFee : 0) }}</p>
+                                            <div v-if="needSRT" v-for="language in selectedLanguages">
+                                                <input class="w3-check" type="checkbox" :id="'srt'+language.id"
+                                                    :value="language" v-model="selectedSRTLanguages"
+                                                    style="margin-left: 20px;" />
+                                                <label :for="'srt'+language.id">{{ language.value }}</label><br>
+                                            </div>
+                                        </div> -->
+                                    </section>
 
-                            </form>
-                            <p v-if="isErrMsg" class="w3-red">{{ errMsg }}</p>
-                            <button @click="cancelEditing"
-                                class="w3-button w3-round-large w3-light-gray w3-display-bottomlight">キャンセル</button>
-                            <button @click="finishEditingSong(song.id)"
-                                class="w3-button w3-round-large w3-lime w3-display-bottomright">保存</button>
-                        </div>
-                    </td>
-                </template>
-            </tr>
-        </tbody>
+                                    <hr />
+                                    <label><b>金額</b></label>
+                                    <p>¥{{ languageFee * selectedLanguages.length + (needSRT ?
+                                        srtFee*selectedLanguages.length : 0) }}</p>
+
+                                </form>
+                                <p v-if="isErrMsg" class="w3-red">{{ errMsg }}</p>
+                                <button @click="cancelEditing"
+                                    class="w3-button w3-round-large w3-light-gray w3-display-bottomlight">キャンセル</button>
+                                <button @click="finishEditingSong(song.id)"
+                                    class="w3-button w3-round-large w3-lime w3-display-bottomright">保存</button>
+                            </div>
+                        </td>
+                    </template>
+                </tr>
+            </tbody>
         </table>
     </div>
     <div>
