@@ -8,4 +8,5 @@ export const languages = {
     MALAY: { id: 'ms', value: 'マレー語' },
     VIETNAMESE: { id: 'vi', value: 'ベトナム語' },
     SPANISH: { id: 'es', value: 'スペイン語'},
+    FRENCH: { id: 'fr', value: 'フランス語'},
 };
