@@ -16,9 +16,11 @@ let confirmButtonDisable = ref(true);
             <h1 class="w3-text-lime"> <span><img class="w3-round w3-image" src="../assets/musicMarketingLab.webp"
                         alt="Music Marketing Labのロゴ" style="width:100%;max-width:150px"></span>
                 <b>歌詞多言語翻訳サービス</b>
-            <caption>※このフォームはデモ版です。</caption>
+            
             </h1>
+           
         </div>
+        <span class="w3-text-red">※このフォームはデモ版です。</span>
     </header>
     <div>
         <h3>ご連絡先</h3>
