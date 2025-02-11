@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watchEffect, watch } from 'vue';
 import { languages } from '@/const/Languages';
 import SongForm from './SongForm.vue';
 import { errorMessages } from 'vue/compiler-sfc';
@@ -12,22 +12,13 @@ const languageFee = 3500;
 const isErrMsg = ref(false);
 const errMsg = ref('');
 
-const calculateSongPrice = () => {
-  let totalPrice = languageFee * selectedLanguages.value.length;
-  if (needSRT) {
-    selectedSRTLanguages.value.forEach((language) => {
-        const languageResult = selectedLanguages.find(lang => lang.id === language.id);
-        if (!languageResult) {
-            const index = selectedSRTLanguages.value.findIndex((lang) => {lang.id === language.id});
-            
-        }
-    });
-    totalPrice += srtFee * selectedSRTLanguages.length;
-    
-  }
-  // より複雑な計算式を追加する場合はここに記述
-  return totalPrice;
-};
+const price = computed(() => {
+    let totalPrice = languageFee * selectedLanguages.value.length;
+    if (needSRT) {
+        totalPrice += srtFee * selectedSRTLanguages.value.length;
+    }
+    return totalPrice;
+});
 
 let isEditing = ref(false);
 let artistName = ref('');
@@ -49,15 +40,23 @@ let selectedSong = ref();
 const lyricsFileContent = ref('');
 let audioKey = ref(0);
 
-
 onMounted(() => {
     const today = new Date();
     const sevenDaysAfter = new Date(today);
     sevenDaysAfter.setDate(today.getDate() + 7);
     deadline.value = sevenDaysAfter;
 });
+watchEffect(() => {
+    if (!needSRT.value && selectedSRTLanguages.value.length > 0) {
+        selectedSRTLanguages.value = [];
+    };
+    if (selectedLanguages.value.length > 0){
+        selectedSRTLanguages.value = selectedSRTLanguages.value.filter(srtLanguage =>
+      selectedLanguages.value.some(language => language.id === srtLanguage.id)
+    );
+    };
+});
 const formattedDate = computed(() => {
-
     return deadline.value.toLocaleDateString('ja-JP', { timeZone: 'JST' });
 });
 
@@ -204,7 +203,7 @@ function handleLyricsFile(event) {
 }
 
 const SRTselectAll = () => {
-  selectedSRTLanguages.value = JSON.parse(JSON.stringify(selectedLanguages.value));
+    selectedSRTLanguages.value = JSON.parse(JSON.stringify(selectedLanguages.value));
 };
 
 function handleAudioUpload(event) {
@@ -329,8 +328,18 @@ function handleAudioUpload(event) {
                                     <section>
                                         <h6 class="w3-text-gray">オプション</h6>
 
-                                        <input class="w3-check" type="checkbox" v-model="needSRT">
-                                        <label><b>srtファイル作成 +¥{{ srtFee*selectedLanguages.length }}</b> (1言語あたり¥1000)</label><br>
+                                        <input class="w3-check" type="checkbox" v-model="needSRT" id="needSRT">
+                                        <label for="needSRT"><b>srtファイル作成 +¥{{ srtFee }} / 1言語</b>
+                                            </label><br>
+                                        <div v-if="needSRT">
+                                            <button @click.prevent="SRTselectAll" class="w3-btn w3-round-large w3-light-gray">全て選択</button>
+                                            <div v-for="language in selectedLanguages">
+                                                <input class="w3-check" type="checkbox" :id="'srt'+language.id"
+                                                    :value="language" v-model="selectedSRTLanguages"
+                                                    style="margin-left: 20px;" />
+                                                <label :for="'srt'+language.id">{{ language.value }}</label><br>
+                                            </div>
+                                        </div>
                                         <!-- <div v-if="needSRT">
                                             <button @click.prevent="SRTselectAll" class="w3-btn w3-round-large w3-light-gray" >全て選択</button>
 
@@ -345,8 +354,7 @@ function handleAudioUpload(event) {
 
                                     <hr />
                                     <label><b>金額</b></label>
-                                    <p>¥{{ languageFee * selectedLanguages.length + (needSRT ?
-                                        srtFee*selectedLanguages.length : 0) }}</p>
+                                    <p>¥{{ languageFee*selectedLanguages.length + (needSRT ? srtFee*selectedSRTLanguages.length : 0) }}</p>
 
                                 </form>
                                 <p v-if="isErrMsg" class="w3-red">{{ errMsg }}</p>
