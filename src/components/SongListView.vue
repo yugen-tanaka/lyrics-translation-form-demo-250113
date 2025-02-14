@@ -1,12 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, watchEffect, watch } from 'vue';
+import { ref, computed, onMounted, watchEffect } from 'vue';
 import { languages } from '@/const/Languages';
 import SongForm from './SongForm.vue';
 import { errorMessages } from 'vue/compiler-sfc';
 
 let songs = ref(JSON.parse(localStorage.getItem("songs")) || []);
 const songsLimit = 20;
-const srtFee = 1000;
+const srtFee = 2000;
 const languageFee = 3500;
 
 const isErrMsg = ref(false);
